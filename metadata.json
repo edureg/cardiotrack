@@ -1,0 +1,5 @@
+{
+  "name": "CardioTrack",
+  "description": "Aplicación PWA para el seguimiento de presión arterial y pulsaciones.",
+  "requestFramePermissions": []
+}
