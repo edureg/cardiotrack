@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, HeartPulse, AlertTriangle, Trash2, Download, Upload, Activity, CalendarDays, LineChart as LineChartIcon, Lock, Unlock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, HeartPulse, AlertTriangle, Trash2, Download, Upload, Activity, CalendarDays, LineChart as LineChartIcon, Lock, Unlock, X, Maximize2, Minimize2, MessageSquare, MessageSquareOff } from 'lucide-react';
 import { BloodPressureLog } from './types';
 import { loadLogs, addLog, deleteLog } from './utils/storage';
 import { exportToCSV, importFromCSV } from './utils/exportImport';
@@ -17,7 +17,14 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'daily' | 'history'>('daily');
   const [isEditMode, setIsEditMode] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
+  const [hiddenTooltipDate, setHiddenTooltipDate] = useState<string | null>(null);
   
+  const [isChartExpanded, setIsChartExpanded] = useState(false);
+  const [showTooltips, setShowTooltips] = useState(true);
+  const [showSys, setShowSys] = useState(true);
+  const [showDia, setShowDia] = useState(true);
+  const [showPul, setShowPul] = useState(true);
+
   // Default date range for history: last 30 days to today
   const defaultStart = new Date();
   defaultStart.setDate(defaultStart.getDate() - 30);
@@ -116,12 +123,29 @@ export default function App() {
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const currentFullDate = payload[0].payload.fullDate;
+      
+      if (hiddenTooltipDate === currentFullDate) {
+        return null;
+      }
+
       const order: Record<string, number> = { systolic: 1, diastolic: 2, pulse: 3 };
       const sortedPayload = [...payload].sort((a, b) => order[a.dataKey] - order[b.dataKey]);
 
       return (
-        <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-3 shadow-xl">
-          <p className="text-[#94a3b8] mb-2 text-sm">{payload[0].payload.fullDate}</p>
+        <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-3 shadow-xl relative pr-10 pointer-events-auto">
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setHiddenTooltipDate(currentFullDate);
+            }}
+            className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
+            title="Cerrar detalle"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <p className="text-[#94a3b8] mb-2 text-sm">{currentFullDate}</p>
           {sortedPayload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="text-sm font-medium my-1">
               {entry.name}: {entry.value}
@@ -199,7 +223,7 @@ export default function App() {
               <HeartPulse className="w-6 h-6 text-rose-500" />
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-white">
-              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.2</span>
+              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.4</span>
             </h1>
           </div>
           
@@ -389,35 +413,87 @@ export default function App() {
 
             {historyLogs.length > 0 && (
               <div className="mb-8 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-3xl p-4 pt-6 shadow-xl">
-                <h2 className="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider ml-1">
-                  Evolución
-                </h2>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#64748b" 
-                        fontSize={12} 
-                        tickLine={false}
-                        axisLine={false}
-                        dy={10}
-                      />
-                      <YAxis 
-                        stroke="#64748b" 
-                        fontSize={12} 
-                        tickLine={false}
-                        axisLine={false}
-                        domain={['dataMin - 10', 'dataMax + 10']}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
-                      <Line type="monotone" dataKey="systolic" name="Sistólica" stroke="#f43f5e" strokeWidth={3} dot={{ r: 3, fill: '#f43f5e', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="diastolic" name="Diastólica" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                      <Line type="monotone" dataKey="pulse" name="Pulsaciones" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="flex items-center justify-between mb-4 ml-1">
+                  <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+                    Evolución
+                  </h2>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setShowTooltips(!showTooltips)}
+                      className={`p-1.5 rounded-lg border transition-colors ${showTooltips ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-800/50 border-white/5 text-slate-500'}`}
+                      title={showTooltips ? "Ocultar Tooltips" : "Mostrar Tooltips"}
+                    >
+                      {showTooltips ? <MessageSquare className="w-4 h-4" /> : <MessageSquareOff className="w-4 h-4" />}
+                    </button>
+                    <button 
+                      onClick={() => setIsChartExpanded(!isChartExpanded)}
+                      className={`p-1.5 rounded-lg border transition-colors ${isChartExpanded ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-800/50 border-white/5 text-slate-500'}`}
+                      title={isChartExpanded ? "Comprimir gráfico" : "Ampliar gráfico"}
+                    >
+                      {isChartExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-6 ml-1">
+                  <button onClick={() => setShowSys(!showSys)} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${showSys ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-slate-800/50 border-white/5 text-slate-500'}`}>
+                    <div className={`w-2 h-2 rounded-full ${showSys ? 'bg-rose-500' : 'bg-slate-600'}`}></div> Sistólica
+                  </button>
+                  <button onClick={() => setShowDia(!showDia)} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${showDia ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-slate-800/50 border-white/5 text-slate-500'}`}>
+                    <div className={`w-2 h-2 rounded-full ${showDia ? 'bg-blue-500' : 'bg-slate-600'}`}></div> Diastólica
+                  </button>
+                  <button onClick={() => setShowPul(!showPul)} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${showPul ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800/50 border-white/5 text-slate-500'}`}>
+                    <div className={`w-2 h-2 rounded-full ${showPul ? 'bg-emerald-500' : 'bg-slate-600'}`}></div> Pulso
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto pb-2 -mx-2 px-2">
+                  <div style={{ width: isChartExpanded ? Math.max(chartData.length * 45, 300) : '100%', height: 256 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart 
+                        data={chartData} 
+                        margin={{ top: 5, right: 5, left: -25, bottom: 5 }}
+                        onMouseMove={(state) => {
+                          if (state?.activePayload?.[0]?.payload?.fullDate) {
+                            const hoveredDate = state.activePayload[0].payload.fullDate;
+                            if (hiddenTooltipDate && hoveredDate !== hiddenTooltipDate) {
+                              setHiddenTooltipDate(null);
+                            }
+                          }
+                        }}
+                        onClick={(state) => {
+                          if (state?.activePayload?.[0]?.payload?.fullDate) {
+                            const hoveredDate = state.activePayload[0].payload.fullDate;
+                            if (hiddenTooltipDate && hoveredDate !== hiddenTooltipDate) {
+                              setHiddenTooltipDate(null);
+                            }
+                          }
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                        <XAxis 
+                          dataKey="date" 
+                          stroke="#64748b" 
+                          fontSize={12} 
+                          tickLine={false}
+                          axisLine={false}
+                          dy={10}
+                          minTickGap={isChartExpanded ? 15 : 5}
+                        />
+                        <YAxis 
+                          stroke="#64748b" 
+                          fontSize={12} 
+                          tickLine={false}
+                          axisLine={false}
+                          domain={['dataMin - 10', 'dataMax + 10']}
+                        />
+                        {showTooltips && <Tooltip content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'auto' }} />}
+                        {showSys && <Line type="monotone" dataKey="systolic" name="Sistólica" stroke="#f43f5e" strokeWidth={3} dot={{ r: 3, fill: '#f43f5e', strokeWidth: 0 }} activeDot={{ r: 6 }} />}
+                        {showDia && <Line type="monotone" dataKey="diastolic" name="Diastólica" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 6 }} />}
+                        {showPul && <Line type="monotone" dataKey="pulse" name="Pulsaciones" stroke="#10b981" strokeWidth={3} dot={{ r: 3, fill: '#10b981', strokeWidth: 0 }} activeDot={{ r: 6 }} />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             )}
