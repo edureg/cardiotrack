@@ -105,7 +105,7 @@ export default function App() {
     systolic: log.systolic,
     diastolic: log.diastolic,
     pulse: log.pulse,
-    fullDate: new Date(log.timestamp).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+    fullDate: new Date(log.timestamp).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
   }));
 
   const formatDate = (date: Date) => {
@@ -166,7 +166,7 @@ export default function App() {
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">
-              {showDate ? logDate.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : logDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              {showDate ? logDate.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : logDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </span>
             {isHigh && (
               <span className="flex items-center gap-1 text-xs font-medium text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
@@ -223,7 +223,7 @@ export default function App() {
               <HeartPulse className="w-6 h-6 text-rose-500" />
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-white">
-              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.4</span>
+              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.5</span>
             </h1>
           </div>
           
@@ -359,16 +359,24 @@ export default function App() {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center justify-between mb-4 ml-1">
-              <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+            <div className="mb-4">
+              <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider ml-1 mb-3">
                 Filtro de Fechas
               </h2>
-              <button 
-                onClick={() => setShowAllDates(!showAllDates)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors border ${showAllDates ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-slate-800 text-slate-400 border-white/5 hover:bg-slate-700'}`}
-              >
-                {showAllDates ? 'Mostrando Todos' : 'Mostrar Todos'}
-              </button>
+              <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5">
+                <button 
+                  onClick={() => setShowAllDates(false)}
+                  className={`flex-1 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${!showAllDates ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Rango de Fechas
+                </button>
+                <button 
+                  onClick={() => setShowAllDates(true)}
+                  className={`flex-1 text-xs font-medium px-3 py-2 rounded-lg transition-colors ${showAllDates ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Mostrar Todos
+                </button>
+              </div>
             </div>
             
             {!showAllDates && (

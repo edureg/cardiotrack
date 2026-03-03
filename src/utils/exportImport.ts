@@ -12,7 +12,7 @@ export const exportToCSV = () => {
   const rows = logs.map(log => {
     const date = new Date(log.timestamp);
     const dateString = date.toLocaleDateString('es-AR');
-    const timeString = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const timeString = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
     return [
       log.id,
       dateString,
