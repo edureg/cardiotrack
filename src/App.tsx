@@ -101,7 +101,7 @@ export default function App() {
   const avgPulse = historyLogs.length ? Math.round(historyLogs.reduce((acc, log) => acc + log.pulse, 0) / historyLogs.length) : 0;
 
   const chartData = [...historyLogs].reverse().map(log => ({
-    date: new Date(log.timestamp).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
+    date: new Date(log.timestamp).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }),
     systolic: log.systolic,
     diastolic: log.diastolic,
     pulse: log.pulse,
@@ -166,7 +166,7 @@ export default function App() {
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-medium text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">
-              {showDate ? logDate.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : logDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+              {showDate ? logDate.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : logDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </span>
             {isHigh && (
               <span className="flex items-center gap-1 text-xs font-medium text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
@@ -223,7 +223,7 @@ export default function App() {
               <HeartPulse className="w-6 h-6 text-rose-500" />
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-white">
-              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.5</span>
+              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.6</span>
             </h1>
           </div>
           
