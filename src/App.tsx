@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, HeartPulse, AlertTriangle, Trash2, Download, Upload, Activity, CalendarDays, LineChart as LineChartIcon, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, HeartPulse, AlertTriangle, Trash2, Download, Upload, Activity, CalendarDays, LineChart as LineChartIcon, Lock, Unlock } from 'lucide-react';
 import { BloodPressureLog } from './types';
 import { loadLogs, addLog, deleteLog } from './utils/storage';
 import { exportToCSV, importFromCSV } from './utils/exportImport';
@@ -15,6 +15,8 @@ export default function App() {
   const [notes, setNotes] = useState('');
 
   const [activeTab, setActiveTab] = useState<'daily' | 'history'>('daily');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showAllDates, setShowAllDates] = useState(false);
   
   // Default date range for history: last 30 days to today
   const defaultStart = new Date();
@@ -81,10 +83,15 @@ export default function App() {
   }).sort((a, b) => b.timestamp - a.timestamp);
 
   const historyLogs = logs.filter(log => {
+    if (showAllDates) return true;
     const logDate = new Date(log.timestamp);
     const logDateString = logDate.toISOString().split('T')[0];
     return logDateString >= startDate && logDateString <= endDate;
   }).sort((a, b) => b.timestamp - a.timestamp);
+
+  const avgSystolic = historyLogs.length ? Math.round(historyLogs.reduce((acc, log) => acc + log.systolic, 0) / historyLogs.length) : 0;
+  const avgDiastolic = historyLogs.length ? Math.round(historyLogs.reduce((acc, log) => acc + log.diastolic, 0) / historyLogs.length) : 0;
+  const avgPulse = historyLogs.length ? Math.round(historyLogs.reduce((acc, log) => acc + log.pulse, 0) / historyLogs.length) : 0;
 
   const chartData = [...historyLogs].reverse().map(log => ({
     date: new Date(log.timestamp).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
@@ -105,6 +112,25 @@ export default function App() {
       return 'Ayer';
     }
     return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const order: Record<string, number> = { systolic: 1, diastolic: 2, pulse: 3 };
+      const sortedPayload = [...payload].sort((a, b) => order[a.dataKey] - order[b.dataKey]);
+
+      return (
+        <div className="bg-[#0f172a] border border-[#1e293b] rounded-xl p-3 shadow-xl">
+          <p className="text-[#94a3b8] mb-2 text-sm">{payload[0].payload.fullDate}</p>
+          {sortedPayload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm font-medium my-1">
+              {entry.name}: {entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
   const renderLogCard = (log: BloodPressureLog, showDate: boolean = false) => {
@@ -149,12 +175,14 @@ export default function App() {
           )}
         </div>
         
-        <button 
-          onClick={() => handleDelete(log.id)}
-          className="p-3 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
+        {isEditMode && (
+          <button 
+            onClick={() => handleDelete(log.id)}
+            className="p-3 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-colors"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
       </div>
     );
   };
@@ -171,17 +199,26 @@ export default function App() {
               <HeartPulse className="w-6 h-6 text-rose-500" />
             </div>
             <h1 className="text-xl font-semibold tracking-tight text-white">
-              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.1</span>
+              CardioTrack <span className="text-xs text-slate-500 font-normal ml-1">v1.2</span>
             </h1>
           </div>
           
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="p-2 rounded-full bg-slate-800/50 hover:bg-slate-800 border border-white/5 transition-colors"
-            title="Importar respaldo"
-          >
-            <Upload className="w-5 h-5 text-slate-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`p-2 rounded-full border transition-colors ${isEditMode ? 'bg-rose-500/20 border-rose-500/50 text-rose-500' : 'bg-slate-800/50 border-white/5 text-slate-400 hover:bg-slate-800'}`}
+              title={isEditMode ? "Desactivar edición" : "Activar edición (Borrar)"}
+            >
+              {isEditMode ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-full bg-slate-800/50 hover:bg-slate-800 border border-white/5 transition-colors"
+              title="Importar respaldo"
+            >
+              <Upload className="w-5 h-5 text-slate-400" />
+            </button>
+          </div>
           <input 
             type="file" 
             accept=".csv" 
@@ -298,30 +335,57 @@ export default function App() {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider ml-1">
-              Filtro de Fechas
-            </h2>
-            
-            <div className="grid grid-cols-2 gap-4 mb-8 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-2xl p-4">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1 ml-1">Desde</label>
-                <input 
-                  type="date" 
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1 ml-1">Hasta</label>
-                <input 
-                  type="date" 
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200"
-                />
-              </div>
+            <div className="flex items-center justify-between mb-4 ml-1">
+              <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider">
+                Filtro de Fechas
+              </h2>
+              <button 
+                onClick={() => setShowAllDates(!showAllDates)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors border ${showAllDates ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-slate-800 text-slate-400 border-white/5 hover:bg-slate-700'}`}
+              >
+                {showAllDates ? 'Mostrando Todos' : 'Mostrar Todos'}
+              </button>
             </div>
+            
+            {!showAllDates && (
+              <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-2xl p-4">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1 ml-1">Desde</label>
+                  <input 
+                    type="date" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1 ml-1">Hasta</label>
+                  <input 
+                    type="date" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all text-slate-200"
+                  />
+                </div>
+              </div>
+            )}
+
+            {historyLogs.length > 0 && (
+              <div className="mb-6 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex justify-between items-center shadow-lg">
+                <div className="text-center flex-1 border-r border-white/10">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Prom. Sistólica</p>
+                  <p className="text-xl font-bold text-rose-400">{avgSystolic}</p>
+                </div>
+                <div className="text-center flex-1 border-r border-white/10">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Prom. Diastólica</p>
+                  <p className="text-xl font-bold text-blue-400">{avgDiastolic}</p>
+                </div>
+                <div className="text-center flex-1">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Prom. Pulso</p>
+                  <p className="text-xl font-bold text-emerald-400">{avgPulse}</p>
+                </div>
+              </div>
+            )}
 
             {historyLogs.length > 0 && (
               <div className="mb-8 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-3xl p-4 pt-6 shadow-xl">
@@ -347,12 +411,7 @@ export default function App() {
                         axisLine={false}
                         domain={['dataMin - 10', 'dataMax + 10']}
                       />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '0.75rem', color: '#f8fafc' }}
-                        itemStyle={{ fontSize: '14px', fontWeight: 500 }}
-                        labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
-                        labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
-                      />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} iconType="circle" />
                       <Line type="monotone" dataKey="systolic" name="Sistólica" stroke="#f43f5e" strokeWidth={3} dot={{ r: 3, fill: '#f43f5e', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                       <Line type="monotone" dataKey="diastolic" name="Diastólica" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 6 }} />
